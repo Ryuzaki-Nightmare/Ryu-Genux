@@ -1,7 +1,8 @@
 [ORG 0x7E00]
 [Bits 16] ; 16 Bits :D
 ;This archive is Just 16 to 32 bits, if you want 64bits you can fork to make transition :D
-jmp main ;Call Main Function
+jmp main_16 ;Call Main Function
+KERNEL_LOCATION equ 0x1000
 get_a20_state:
 	pushf
 	push si
@@ -30,6 +31,7 @@ get_a20_state:
 	cmp al, [es:di]					;	check byte at address 0x0500 != byte at address 0x100500
 	jne .exit
 	dec ah
+    call enable_A20
 .exit:
 	mov al, [.BufferBelowMB]
 	mov [ds:si], al
@@ -83,10 +85,54 @@ gdt_start:
     db 0x00
 gdt_end:
 
-;MEMORY MAP functions
+enable_A20: ; from https://wiki.osdev.org/A20_Line
+cli                     ; disable interrupts
+
+call    a20wait
+mov     al,0xAD
+out     0x64,al         ; disable keyboard
+
+call    a20wait
+mov     al,0xD0
+out     0x64,al         ; read controller output port
+
+call    a20wait2
+in      al,0x60         ; save response byte
+push    eax
+
+call    a20wait
+mov     al,0xD1
+out     0x64,al         ; write next byte into controller output port
+
+call    a20wait
+pop     eax
+or      al,2            ; set controller output bit for A20 on
+out     0x60,al         ; activate A20
+
+call    a20wait
+mov     al,0xAE
+out     0x64,al         ; reactivate keyboard
+
+call    a20wait
+sti                     ; reactivate interrupts
+ret
+
+a20wait:                        ; wait until input buffer is clear
+in      al,0x64
+test    al,2
+jnz     a20wait
+ret
+
+
+a20wait2:                       ; wait until response byte has arrived
+in      al,0x64
+test    al,1
+jz      a20wait2
+ret
+;MEMORY MAP functions, FROM OS-WIKI DEV !!!!
 mmap_ent equ 0x8000             ; the number of entries will be stored at 0x8000
 do_e820:
-        mov di, 0x8004          ; Set di to 0x8004. Otherwise this code will get stuck in `int 0x15` after some entries are fetched 
+    mov di, 0x8004          ; Set di to 0x8004. Otherwise this code will get stuck in `int 0x15` after some entries are fetched 
 	xor ebx, ebx		; ebx must be 0 to start
 	xor bp, bp		; keep an entry count in bp
 	mov edx, 0x0534D4150	; Place "SMAP" into edx
@@ -133,111 +179,53 @@ do_e820:
 
 
 
-;Print In Screen Func
-message : db "Hello World 32 Bits"
-print_in_screen_new:
-    mov ax,cs
-    mov es,ax
-    mov ah,13h
-    mov bp,message ;  ES:BP,endress of string
-    mov cx,19 ; number size of string (in this case is "message")
-    mov dx,0 ; position of string (cursor)
-    mov bh,0 ; page number
-    mov al, 0x01 ; attribute mode
-    mov bl,0x0f ; BL atribbute (if al == 0 or al == 1)
-    int 0x10
-    jmp $
-    ret
-main:
+main_16:
     ;16 bits Main funcion
     ;Disable ALL INTERRUPTS in cli and  TurnOFFNMI
     cli
-    mov ax,cs
-    mov dx,ax
-    call print_in_screen_new
-    call do_e820
     call TurnOffNMI
+    call get_a20_state ; Get A20 State And Active A20 if cpu can active :D
+    call do_e820
+    xor ax,ax
+    mov ds,ax
     lgdt [gdtr] ;Load initial gdt, Bye bye IVT, Hello World Gdt!
+    
+    ;Initial Segments
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
+
     mov eax,cr0 
     or al,1
     mov cr0,eax
-    call get_a20_state
-    jmp 08h:ModeMain ;Go to 32 bits
-
-
-
-
-
+    jmp 08h:PreModeMain ;Go to 32 bits
 
 
 ;Bits 32 Finally Bro :)
 [BITS 32]
 
-enable_A20: ; from https://wiki.osdev.org/A20_Line
-        cli                     ; disable interrupts
 
-        call    a20wait
-        mov     al,0xAD
-        out     0x64,al         ; disable keyboard
+PreModeMain:
 
-        call    a20wait
-        mov     al,0xD0
-        out     0x64,al         ; read controller output port
-
-        call    a20wait2
-        in      al,0x60         ; save response byte
-        push    eax
-
-        call    a20wait
-        mov     al,0xD1
-        out     0x64,al         ; write next byte into controller output port
-
-        call    a20wait
-        pop     eax
-        or      al,2            ; set controller output bit for A20 on
-        out     0x60,al         ; activate A20
-
-        call    a20wait
-        mov     al,0xAE
-        out     0x64,al         ; reactivate keyboard
-
-        call    a20wait
-        sti                     ; reactivate interrupts
-        ret
-
-a20wait:                        ; wait until input buffer is clear
-        in      al,0x64
-        test    al,2
-        jnz     a20wait
-        ret
-
-
-a20wait2:                       ; wait until response byte has arrived
-        in      al,0x64
-        test    al,1
-        jz      a20wait2
-        ret
-
-ModeMain:
     ;Load Segments
-    mov ax, 0x8
-    mov cs,ax
     mov ax,0x10
+    mov es,ax
     mov ds,ax
     mov ss,ax
-    mov es,ax
     mov fs,ax
     mov gs,ax
+
+
     mov esp,0x900000 ; UPD stack poiter to secure area!!!
     jmp Main32 ;Go to Main Function 32 bits
-Main32:
+Main32: 
     ;MAIN FUNCTION 32 BITS HERE
     sti
     call  TurnOnNMI; Turn ON NMI
-    call enable_A20 ; Enable A20
-    
-
-;Use iret to interrupts!!!
+    jmp KERNEL_LOCATION
+   ;Use iret to interrupts!!!
 ;0x08 to load cs
 ;0x10 to load ds,ss,es,fs,gs
 

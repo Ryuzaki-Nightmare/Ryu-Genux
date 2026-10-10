@@ -39,6 +39,8 @@ start:
     call clear
     call print_in_screen
     call sleep
+    call sleep
+    call sleep
     call clear
     mov ah, 0x02        ; function, read sector
     mov al, 4           ; How much sectors to read
