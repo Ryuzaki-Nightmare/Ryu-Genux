@@ -1,4 +1,4 @@
-ENTRY(start) /**/
+ENTRY(entry) 
 OUTPUT_FORMAT(elf32-i386)
 SECTIONS
 {   
@@ -6,17 +6,17 @@ SECTIONS
     .text :
     {       
 
-           *(.text) 
+           *(.text*) 
     }
     .data :
     {
-        *(.data)    
+        *(.data*)    
     }
-    .bss:
+    .bss :
     {
-        _bss_start = .;
-        *(.COMMON)
-        *(.bss)
-        _bss_end = .;  
+        bss_start = .;
+        *(COMMON)
+        *(.bss*)
+        bss_end = .;  
     }
 }
