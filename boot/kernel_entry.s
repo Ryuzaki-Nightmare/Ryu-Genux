@@ -1,16 +1,19 @@
 [BITS 32]
 global entry
 extern main
-extern _bss_start
-extern _bss_end
+extern bss_start
+extern bss_end
 
-entry: ;ENTRY IN C FUNCTION
-    mov edi, _bss_end
-    mov ecx, _bss_start
-    sub ecx,edi
-    xor eax,eax
-    ;resets to zero BSS SECTION 
-    cld 
-    rep stosb
-    call main ; call main function in main.c
-    jmp $ ; infinit loop after jmp
+entry:
+    ; Configura os registradores para limpar a BSS
+    mov edi, bss_start
+    mov ecx, bss_end
+    sub ecx, edi        ; Agora a subtração ocorre em tempo de execução na CPU
+    
+    xor eax, eax
+    cld
+    rep stosb           ; Preenche a BSS com zeros
+
+    call main           ; Chama sua função C
+    jmp $               ; Loop infinito de segurança
+
