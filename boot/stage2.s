@@ -178,7 +178,34 @@ do_e820:
 	ret
 
 
-
+;Temp = LBA / (Sectors per Track)
+;MATH fucntions used
+;Sector = (LBA % (Sectors per Track)) + 1
+;Head = Temp % (Number of Heads)
+;Cylinder = Temp / (Number of Heads)
+;LOAD KERNEL FUCTIONS 
+load_kernel:
+    mov ax, 0x0000
+    mov es, ax
+    mov bx, 0x1000
+    mov ah, 0x02
+    mov al, 0x01
+    mov ch, 0x00
+    mov cl, 0x03
+    mov dh, 0x00
+    mov dl, 0x00
+    int 0x13
+    jc error_load_kernel
+    mov ah, 0x0E
+    mov al, 'K'
+    int 0x10
+    ret
+error_load_kernel:
+    ;IF Can't Load Kernel in ram
+    mov ah, 0x0E
+    mov al, '1'
+    int 0x10
+    jmp $
 main_16:
     ;16 bits Main funcion
     ;Disable ALL INTERRUPTS in cli and  TurnOFFNMI
@@ -186,6 +213,7 @@ main_16:
     call TurnOffNMI
     call get_a20_state ; Get A20 State And Active A20 if cpu can active :D
     call do_e820
+    call load_kernel
     xor ax,ax
     mov ds,ax
     lgdt [gdtr] ;Load initial gdt, Bye bye IVT, Hello World Gdt!
@@ -200,7 +228,7 @@ main_16:
     mov eax,cr0 
     or al,1
     mov cr0,eax
-    jmp 08h:PreModeMain ;Go to 32 bits
+    jmp 08h:PreModeMain ;Go to 32 bits, Far Jump
 
 
 ;Bits 32 Finally Bro :)
@@ -217,7 +245,7 @@ PreModeMain:
     mov fs,ax
     mov gs,ax
 
-
+ 
     mov esp,0x900000 ; UPD stack poiter to secure area!!!
     jmp Main32 ;Go to Main Function 32 bits
 Main32: 
@@ -225,7 +253,9 @@ Main32:
     sti
     call  TurnOnNMI; Turn ON NMI
     jmp KERNEL_LOCATION
-   ;Use iret to interrupts!!!
+
+times 512 - ($ - $$) % 512 db 0 ;Multiple 512
+;Use iret to interrupts!!!
 ;0x08 to load cs
 ;0x10 to load ds,ss,es,fs,gs
 
