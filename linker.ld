@@ -1,8 +1,8 @@
-ENTRY(entry) 
-OUTPUT_FORMAT(elf32-i386)
+ENTRY(start) 
+
 SECTIONS
 {   
-    . = 0x1000;
+    
     .text :
     {       
 
@@ -14,9 +14,9 @@ SECTIONS
     }
     .bss :
     {
-        bss_start = .;
+       
         *(COMMON)
         *(.bss*)
-        bss_end = .;  
+       
     }
 }
