@@ -5,7 +5,7 @@ SRC = boot/boot.c
 OUT = $(BUILD)/BOOTX64.EFI
 all : clean
 Compile:
-	mkdir -p $(BUILD)
+		mkdir -p $(BUILD)
 		$ gcc boot/boot.c                            \
       -c                                 \
       -fno-stack-protector               \
