@@ -1,21 +1,51 @@
+
 CC = gcc
-ASM = nasm
-ASMFLAGS = -f bin
 BUILD = build
-SRC  = boot/stage1.s
-SRC2 = boot/stage2.s
-SRC3 = boot/kernel_entry.s
-OUT  = build/bootloader.bin
-log  = qemu.log
-
-
-run:
+SRC = boot/boot.c
+OUT = $(BUILD)/BOOTX64.EFI
+all : clean
+Compile:
 	mkdir -p $(BUILD)
-	nasm $(ASMFLAGS) $(SRC)  -o $(BUILD)/stage1.bin
-	nasm $(ASMFLAGS) $(SRC2) -o $(BUILD)/stage2.bin
-	cat $(BUILD)/stage1.bin  $(BUILD)/stage2.bin > $(OUT)
-	qemu-system-x86_64 -drive format=raw,file=$(OUT) -D qemu.log -d int,cpu_reset
-
-clean:
-	rm -rf $(BUILD)
-	rm -f qemu.log
+		$ gcc boot/boot.c                            \
+      -c                                 \
+      -fno-stack-protector               \
+      -fpic                              \
+      -fshort-wchar                      \
+      -mno-red-zone                      \
+      -I /usr/include/efi     \
+      -I /usr/include/efi/x86_64\
+      -DEFI_FUNCTION_WRAPPER             \
+      -o boot.o
+	  $ ld boot.o                                    \
+      /usr/lib/crt0-efi-x86_64.o          \
+      -nostdlib                                \
+      -znocombreloc                            \
+      -T /usr/lib/elf_x86_64_efi.lds        \
+      -shared                                  \
+      -Bsymbolic                               \
+      -L /usr/lib                        \
+      -l:libgnuefi.a                           \
+      -l:libefi.a                              \
+      -o $(BUILD)/boot.so
+	$ objcopy -j .text                             \
+          -j .sdata                            \
+          -j .data                             \
+          -j .rodata                           \
+          -j .dynamic                          \
+          -j .dynsym                           \
+          -j .rel                              \
+          -j .rela                             \
+          -j .reloc                            \
+          --output-target=efi-app-x86_64       \
+          $(BUILD)/boot.so                              \
+          $(BUILD)/boot.efi
+	mkdir -p esp/EFI/BOOT
+	cp $(BUILD)/boot.efi esp/EFI/BOOT/BOOTX64.EFI
+run: Compile
+	qemu-system-x86_64                             \
+	    -bios /usr/share/edk2/x64/OVMF.4m.fd      \
+	    -drive format=raw,file=fat:rw:esp           \
+	    -vga std
+clean: run
+	rm -rf esp
+	rm boot.o
