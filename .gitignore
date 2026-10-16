@@ -1,3 +1,5 @@
-.*bin
+#GIT IGNORE
 /build
-roadmap.txt
+/esp
+*.o
+
