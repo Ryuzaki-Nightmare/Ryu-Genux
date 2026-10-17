@@ -47,7 +47,7 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
     Status = uefi_call_wrapper(
         Sptr->BootServices->LocateProtocol, 
         3, 
-        &FileSystemProtocol, // GUID do sistema de arquivos
+        &FileSystemProtocol,
         NULL, 
         (VOID **)&FileSystem
     );
