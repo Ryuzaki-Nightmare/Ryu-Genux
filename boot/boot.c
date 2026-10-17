@@ -6,9 +6,7 @@ void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
     GENUX_TIME time;
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
-    Print(L"Now, in GMT + 0 Hour is: %02d:%02d:%02d\n",efi_time.Hour, efi_time.Minute, efi_time.Second);
 
-     
         //This is time to use in Kernel
         time.Year = efi_time.Year;
         time.Month = efi_time.Month;
@@ -42,20 +40,30 @@ BootInfo memory_map() {
     info.MapKey            = MapKey;
     return info;
 }
-
+EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
+    EFI_STATUS Status;
+    EFI_FILE_PROTOCOL Root;
+    Status = Sptr->MediaAccess->OpenVolume(&Sptr, &Root);
+    Print(L"123");
+    return EFI_SUCCESS;
+}
 EFI_STATUS
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
     // Efi main function
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
-    
+        uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
+
     Print(L"Genux Bootloader....\n");
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000); 
     Print(L"Other Print to Test\n");
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
     get_time(SystemTable);
     BootInfo info = memory_map();
-    Print(L"Run ");
+    Open_Volume(SystemTable);
     while(1);
     return EFI_SUCCESS;
     
