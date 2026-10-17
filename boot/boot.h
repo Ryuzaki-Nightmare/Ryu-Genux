@@ -25,7 +25,13 @@ typedef struct {
 } GENUX_TIME;
 
 
-
+typedef struct {
+    EFI_MEMORY_DESCRIPTOR *MemoryMap;
+    UINTN MemoryMapSize;
+    UINTN DescriptorSize;
+    UINT32 DescriptorVersion;
+    UINTN MapKey;
+} BootInfo; //memory map for Genux
 
 
 #endif
