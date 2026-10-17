@@ -42,10 +42,23 @@ BootInfo memory_map() {
 }
 EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
     EFI_STATUS Status;
-    EFI_FILE_PROTOCOL Root;
-    Status = Sptr->MediaAccess->OpenVolume(&Sptr, &Root);
+    EFI_FILE_PROTOCOL *Root = NULL;
+    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
+    Status = uefi_call_wrapper(
+        Sptr->BootServices->LocateProtocol, 
+        3, 
+        &FileSystemProtocol, // GUID do sistema de arquivos
+        NULL, 
+        (VOID **)&FileSystem
+    );
+    if(EFI_ERROR(Status))
+        return Status;
+    Status = uefi_call_wrapper(FileSystem->OpenVolume, 2, FileSystem, &Root); 
     Print(L"123");
     return EFI_SUCCESS;
+}
+EFI_STATUS Load_kernel(EFI_SYSTEM_TABLE *ptr){
+
 }
 EFI_STATUS
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -53,7 +66,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     // Efi main function
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
-        uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
 
     Print(L"Genux Bootloader....\n");
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000); 
