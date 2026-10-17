@@ -42,10 +42,12 @@ Compile:
 	mkdir -p esp/EFI/BOOT
 	cp $(BUILD)/boot.efi esp/EFI/BOOT/BOOTX64.EFI
 run: Compile
-	qemu-system-x86_64                             \
-	    -bios /usr/share/edk2/x64/OVMF.4m.fd      \
-	    -drive format=raw,file=fat:rw:esp           \
-	    -vga std
+		qemu-system-x86_64                        \
+    -bios /usr/share/edk2/x64/OVMF.4m.fd \
+    -drive format=raw,file=fat:rw:esp     \
+    -vga std                              \
+    -D qemu.log                           \
+    -d int,cpu_reset
 clean: run
 	rm -rf esp
 	rm boot.o
