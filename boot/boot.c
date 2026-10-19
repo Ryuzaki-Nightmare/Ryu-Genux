@@ -77,7 +77,8 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     get_time(SystemTable);
     BootInfo info = memory_map();
     Open_Volume(SystemTable);
-    while(1);
+    
+    
     return EFI_SUCCESS;
     
 
