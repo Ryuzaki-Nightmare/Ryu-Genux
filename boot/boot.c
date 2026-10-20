@@ -1,6 +1,9 @@
+//GNU-EFI INCLUDES
 #include <efi.h>
 #include <efilib.h>
-#include "boot.h"
+
+
+#include "boot.h" //this is a local Include
 
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
@@ -38,11 +41,11 @@ BootInfo memory_map() {
     info.DescriptorSize    = DescriptorSize;
     info.DescriptorVersion = DescriptorVersion;
     info.MapKey            = MapKey;
+    Print(L"Success to Get Memory Map\n");
     return info;
 }
-EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
+EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL *Root){
     EFI_STATUS Status;
-    EFI_FILE_PROTOCOL *Root = NULL;
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
     Status = uefi_call_wrapper(
         Sptr->BootServices->LocateProtocol, 
@@ -54,36 +57,39 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
     if(EFI_ERROR(Status))
         return Status;
     Status = uefi_call_wrapper(FileSystem->OpenVolume, 2, FileSystem, &Root); 
-    Print(L"Success in Open Volume\n");
+    Print(L"Success in  Open Volume\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr){
-        EFI_FILE_PROTOCOL *Root = NULL;
+EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root){
         EFI_FILE_PROTOCOL *KernelFile = NULL;
         EFI_STATUS Status;
-    Print(L"Initial");
+     Print(L"Initial\n");
     //Pointer to kernel.c is *KernelFile  
     Status = uefi_call_wrapper(
         Root->Open,
         5,
-        Root,
+        Root, //Correct
         &KernelFile,
         L"\\kernel.c",
         EFI_FILE_MODE_READ,
         EFI_FILE_READ_ONLY
      );
 
-
-    Print(L"Load kernel Success\n");
+    if(EFI_ERROR(Status))
+        Print(L"Error in  Open: %r (Cod: %X)\n",Status,Status);
+        return Status; //Return error if can't load the  kernel
+    Print(L"Success in Load Kernel\n");
     return EFI_SUCCESS;
 }
 EFI_STATUS
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
+    EFI_STATUS Status;
+    EFI_FILE_PROTOCOL *Root = NULL;
     // Efi main function
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
-    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //CLEAR THE SCREEN
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
 
     Print(L"Genux Bootloader....\n");
@@ -91,15 +97,20 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Print(L"Other Print to Test\n");
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
 
-    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
     get_time(SystemTable);
-    BootInfo info = memory_map();
-    Open_Volume(SystemTable);
-    Load_Kernel(SystemTable);
-    
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
 
-    while(1);
-    return EFI_SUCCESS;
+    BootInfo info = memory_map();
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+
+    Open_Volume(SystemTable,Root);
+   
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+    Load_Kernel(SystemTable,Root);
+    Print(L"Return from Load kernel"); 
+
+    while(1); //Remove this line to finish EFI
+    return EFI_SUCCESS; // Good Bye EFI :D
     
 
 }
