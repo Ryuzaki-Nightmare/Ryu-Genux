@@ -54,11 +54,28 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr){
     if(EFI_ERROR(Status))
         return Status;
     Status = uefi_call_wrapper(FileSystem->OpenVolume, 2, FileSystem, &Root); 
-    Print(L"123");
+    Print(L"Success in Open Volume\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS Load_kernel(EFI_SYSTEM_TABLE *ptr){
+EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr){
+        EFI_FILE_PROTOCOL *Root = NULL;
+        EFI_FILE_PROTOCOL *KernelFile = NULL;
+        EFI_STATUS Status;
+    Print(L"Initial");
+    //Pointer to kernel.c is *KernelFile  
+    Status = uefi_call_wrapper(
+        Root->Open,
+        5,
+        Root,
+        &KernelFile,
+        L"\\kernel.c",
+        EFI_FILE_MODE_READ,
+        EFI_FILE_READ_ONLY
+     );
 
+
+    Print(L"Load kernel Success\n");
+    return EFI_SUCCESS;
 }
 EFI_STATUS
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -67,6 +84,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
+    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
 
     Print(L"Genux Bootloader....\n");
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000); 
@@ -77,8 +95,10 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     get_time(SystemTable);
     BootInfo info = memory_map();
     Open_Volume(SystemTable);
+    Load_Kernel(SystemTable);
     
-    
+
+    while(1);
     return EFI_SUCCESS;
     
 
