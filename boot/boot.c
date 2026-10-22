@@ -44,7 +44,7 @@ BootInfo memory_map() {
     Print(L"Success to Get Memory Map\n");
     return info;
 }
-EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL *Root){
+EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL **Root){
     EFI_STATUS Status;
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
     Status = uefi_call_wrapper(
@@ -56,7 +56,7 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL *Root){
     );
     if(EFI_ERROR(Status))
         return Status;
-    Status = uefi_call_wrapper(FileSystem->OpenVolume, 2, FileSystem, &Root); 
+    Status = uefi_call_wrapper(FileSystem->OpenVolume, 2, FileSystem, Root); 
     Print(L"Success in  Open Volume\n");
     return EFI_SUCCESS;
 }
@@ -64,20 +64,21 @@ EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root){
         EFI_FILE_PROTOCOL *KernelFile = NULL;
         EFI_STATUS Status;
      Print(L"Initial\n");
+    Print(L"Root = %p\n", Root);
     //Pointer to kernel.c is *KernelFile  
     Status = uefi_call_wrapper(
         Root->Open,
         5,
         Root, //Correct
         &KernelFile,
-        L"\\kernel.c",
+        L"\\kernel.bin",
         EFI_FILE_MODE_READ,
         EFI_FILE_READ_ONLY
      );
 
     if(EFI_ERROR(Status))
         Print(L"Error in  Open: %r (Cod: %X)\n",Status,Status);
-        return Status; //Return error if can't load the  kernel
+       return Status; //Return error if can't load the  kernel
     Print(L"Success in Load Kernel\n");
     return EFI_SUCCESS;
 }
@@ -103,7 +104,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     BootInfo info = memory_map();
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
 
-    Open_Volume(SystemTable,Root);
+    Open_Volume(SystemTable,&Root);
    
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
     Load_Kernel(SystemTable,Root);
