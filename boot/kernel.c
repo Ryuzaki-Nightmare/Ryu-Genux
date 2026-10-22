@@ -49,7 +49,7 @@ void vga_print(const char* s) {
     }
 }
 
-void  main(){
+void  kernel_main(){
     vga_set_color(VGA_WHITE,VGA_BLACK);
     vga_print("Hello World!");
     while(1);
