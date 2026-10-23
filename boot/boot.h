@@ -24,7 +24,6 @@ typedef struct {
    uint8_t     Pad2;
 } GENUX_TIME;
 
-
 typedef struct {
     EFI_MEMORY_DESCRIPTOR *MemoryMap;
     UINTN MemoryMapSize;
@@ -33,5 +32,7 @@ typedef struct {
     UINTN MapKey;
 } BootInfo; //memory map for Genux
 
+GENUX_TIME time;
+BootInfo info;
 
 #endif

@@ -1,13 +1,15 @@
 //GNU-EFI INCLUDES
 #include <efi.h>
 #include <efilib.h>
-
-
 #include "boot.h" //this is a local Include
+
+/*IMPORTANTS VARIABLES, SET HERE*/
+EFI_FILE_PROTOCOL *KernelFile = NULL;
+EFI_FILE_PROTOCOL *Root = NULL;
+UINT64   *GetKernel = 0;
 
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
-    GENUX_TIME time;
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
 
         //This is time to use in Kernel
@@ -60,12 +62,9 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL **Root){
     Print(L"Success in  Open Volume\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root){
-        EFI_FILE_PROTOCOL *KernelFile = NULL;
-        EFI_STATUS Status;
-     Print(L"Initial\n");
-    Print(L"Root = %p\n", Root);
-    //Pointer to kernel.c is *KernelFile  
+EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL *KernelFile){
+    EFI_STATUS Status;
+     //Pointer to kernel.bin is *KernelFile  
     Status = uefi_call_wrapper(
         Root->Open,
         5,
@@ -76,45 +75,80 @@ EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root){
         EFI_FILE_READ_ONLY
      );
 
-    if(EFI_ERROR(Status))
+    if(EFI_ERROR(Status)){
         Print(L"Error in  Open: %r (Cod: %X)\n",Status,Status);
-       return Status; //Return error if can't load the  kernel
+        return Status; //Return error if can't load the  kernel
+    }
     Print(L"Success in Load Kernel\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS
-efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
-{
+EFI_STATUS set_kernel(EFI_FILE_PROTOCOL *Kernel){
+    //Now, i'll set kernel in 0x100000, you can see definition on linker.ld
     EFI_STATUS Status;
-    EFI_FILE_PROTOCOL *Root = NULL;
+    Status = uefi_call_wrapper(
+        Kernel->SetPosition,
+        2,
+        Kernel,
+        0xFFFFFFFFFFFFFFFF
+    );
+    //Now, *Kernel is in 0xFFFFFFFFFFFFFFFF
+    if(EFI_ERROR(Status)){
+        Print(L"Error in set kernel %r (Cod: %X)\n",Status,Status);
+        return Status;
+    }
+    Print(L"Success in set kernel\n");
+    return  EFI_SUCCESS;
+}
+EFI_STATUS get_kernel(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+    Status = uefi_call_wrapper(
+        Kernel->GetPosition,
+        2,
+        Kernel,
+        &GetKernel
+    );
+
+    if(EFI_ERROR(Status)){
+        Print(L"Error in get kernel %r Cod %X\n",Status,Status);
+        return Status;
+    }
+    Print(L"Success in get kernel\n");
+    return EFI_SUCCESS;
+
+}
+
+
+
+
+EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+{
     // Efi main function
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //CLEAR THE SCREEN
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
-
+    Print(L"Welcome to Genux Bootloader!\n");
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 2000000);
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); 
     Print(L"Genux Bootloader....\n");
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000); 
-    Print(L"Other Print to Test\n");
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-
     get_time(SystemTable);
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
 
-    BootInfo info = memory_map();
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+
 
     Open_Volume(SystemTable,&Root);
-   
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-    Load_Kernel(SystemTable,Root);
-    Print(L"Return from Load kernel"); 
-
-    while(1); //Remove this line to finish EFI
+    Load_Kernel(SystemTable,Root,KernelFile);
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+    set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
+    
+    get_kernel(KernelFile); //get 
+    Print(L"1");
+    while(1); //Remove this line to finish EFI!
     return EFI_SUCCESS; // Good Bye EFI :D
     
 
 }
 
 
-
+ 
