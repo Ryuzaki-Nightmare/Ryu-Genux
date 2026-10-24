@@ -5,7 +5,7 @@
 
 /*IMPORTANTS VARIABLES, SET HERE*/
 EFI_STATUS Status ;
-EFI_FILE_PROTOCOL **KernelFile = NULL;
+EFI_FILE_PROTOCOL *KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
 UINT64   *GetKernel = 0;
 UINT64 MHex =  0xFFFFFFFFFFFFFFFF; //Max Value
@@ -70,7 +70,7 @@ EFI_STATUS Load_Kernel(EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL **KernelFile){
         Root->Open,
         5,
         Root,
-        &KernelFile,
+        KernelFile,
         L"\\kernel.bin",
         EFI_FILE_MODE_READ,
         EFI_FILE_READ_ONLY
@@ -82,22 +82,26 @@ EFI_STATUS Load_Kernel(EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL **KernelFile){
     }
     
     Print(L"Success in Load Kernel\n");
+    Print(L"%p\n",KernelFile);
    return EFI_SUCCESS;
 }
-EFI_STATUS set_kernel(EFI_FILE_PROTOCOL **Kernel){
-    EFI_FILE_PROTOCOL *This;
-    This = *Kernel;
-    Print(L"kernel %p, the kernel file is %p\n",Kernel,KernelFile);
-    Print(L"this %p\n",This);
-    (**Kernel).SetPosition(
-        //TODO IN EFI_FILE_PROTOCOL *THIS and UINT64 POSITION
-        This,       
+EFI_STATUS set_kernel(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+    Status = uefi_call_wrapper(
+        Kernel->SetPosition,
+        2, 
+        Kernel,
         MHex
     );
-    Print(L"GG\n");
+    
+    if(EFI_ERROR(Status)){
+        Print(L"Error in set kernel");
+        return Status;
+    }
+
+    Print(L"Success on set kernel");
     return EFI_SUCCESS;
 }
-
 
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -118,8 +122,9 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     Open_Volume(SystemTable,&Root);
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-    Load_Kernel(Root,KernelFile);
-    //set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
+    Load_Kernel(Root,&KernelFile);
+  
+    set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
     Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
     return EFI_SUCCESS; // Good Bye EFI :D
