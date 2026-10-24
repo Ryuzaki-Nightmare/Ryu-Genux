@@ -48,6 +48,7 @@ Compile:
 KERNEL_COMPILE:Compile
 		$(CC) $(KERNEL) $(CCFLAGS) -o $(BUILD)/esp/kernel.bin 
 run: KERNEL_COMPILE
+	#in "-m 16G" put how many memory ram you want use in qemu, in -smp is how many cores you want use in Qemu
 	qemu-system-x86_64                        \
     -enable-kvm                           \
     -m 16G                                \

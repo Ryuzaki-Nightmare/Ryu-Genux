@@ -4,10 +4,11 @@
 #include "boot.h" //this is a local Include
 
 /*IMPORTANTS VARIABLES, SET HERE*/
-EFI_FILE_PROTOCOL *KernelFile = NULL;
+EFI_STATUS Status ;
+EFI_FILE_PROTOCOL **KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
 UINT64   *GetKernel = 0;
-
+UINT64 MHex =  0xFFFFFFFFFFFFFFFF; //Max Value
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
@@ -62,13 +63,13 @@ EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL **Root){
     Print(L"Success in  Open Volume\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL *KernelFile){
+EFI_STATUS Load_Kernel(EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL **KernelFile){
     EFI_STATUS Status;
      //Pointer to kernel.bin is *KernelFile  
     Status = uefi_call_wrapper(
         Root->Open,
         5,
-        Root, //Correct
+        Root,
         &KernelFile,
         L"\\kernel.bin",
         EFI_FILE_MODE_READ,
@@ -79,44 +80,23 @@ EFI_STATUS Load_Kernel(EFI_SYSTEM_TABLE *ptr,EFI_FILE_PROTOCOL *Root,EFI_FILE_PR
         Print(L"Error in  Open: %r (Cod: %X)\n",Status,Status);
         return Status; //Return error if can't load the  kernel
     }
+    
     Print(L"Success in Load Kernel\n");
+   return EFI_SUCCESS;
+}
+EFI_STATUS set_kernel(EFI_FILE_PROTOCOL **Kernel){
+    EFI_FILE_PROTOCOL *This;
+    This = *Kernel;
+    Print(L"kernel %p, the kernel file is %p\n",Kernel,KernelFile);
+    Print(L"this %p\n",This);
+    (**Kernel).SetPosition(
+        //TODO IN EFI_FILE_PROTOCOL *THIS and UINT64 POSITION
+        This,       
+        MHex
+    );
+    Print(L"GG\n");
     return EFI_SUCCESS;
 }
-EFI_STATUS set_kernel(EFI_FILE_PROTOCOL *Kernel){
-    //Now, i'll set kernel in 0x100000, you can see definition on linker.ld
-    EFI_STATUS Status;
-    Status = uefi_call_wrapper(
-        Kernel->SetPosition,
-        2,
-        Kernel,
-        0xFFFFFFFFFFFFFFFF
-    );
-    //Now, *Kernel is in 0xFFFFFFFFFFFFFFFF
-    if(EFI_ERROR(Status)){
-        Print(L"Error in set kernel %r (Cod: %X)\n",Status,Status);
-        return Status;
-    }
-    Print(L"Success in set kernel\n");
-    return  EFI_SUCCESS;
-}
-EFI_STATUS get_kernel(EFI_FILE_PROTOCOL *Kernel){
-    EFI_STATUS Status;
-    Status = uefi_call_wrapper(
-        Kernel->GetPosition,
-        2,
-        Kernel,
-        &GetKernel
-    );
-
-    if(EFI_ERROR(Status)){
-        Print(L"Error in get kernel %r Cod %X\n",Status,Status);
-        return Status;
-    }
-    Print(L"Success in get kernel\n");
-    return EFI_SUCCESS;
-
-}
-
 
 
 
@@ -138,12 +118,9 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     Open_Volume(SystemTable,&Root);
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-    Load_Kernel(SystemTable,Root,KernelFile);
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-    set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
-    
-    get_kernel(KernelFile); //get 
-    Print(L"1");
+    Load_Kernel(Root,KernelFile);
+    //set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
+    Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
     return EFI_SUCCESS; // Good Bye EFI :D
     
