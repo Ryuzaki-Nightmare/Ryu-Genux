@@ -2,12 +2,8 @@
 #define BOOT_H
 //TYPEDEFs
 
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int   uint32_t;
-
-typedef signed char  int8_t;
-typedef short int16_t; 
+typedef unsigned long   UINTN;
+typedef unsigned int UINT32;
 
 //Genux Time Struct
 typedef struct {
@@ -23,7 +19,6 @@ typedef struct {
    uint8_t     Daylight;
    uint8_t     Pad2;
 } GENUX_TIME;
-
 typedef struct {
     EFI_MEMORY_DESCRIPTOR *MemoryMap;
     UINTN MemoryMapSize;

@@ -7,11 +7,13 @@
 EFI_STATUS Status ;
 EFI_FILE_PROTOCOL *KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
-EFI_PHYSICAL_ADDRESS Memory = (EFI_PHYSICAL_ADDRESS)0x100000; //Pointer to kernel physical address
+EFI_PHYSICAL_ADDRESS Memory = 0x100000; //Pointer to kernel physical address
 
 UINT64   *GetKernel = 0;
 UINT64 MHex =  0xFFFFFFFFFFFFFFFF; //Max Value
-
+//Variables Read kernel
+VOID *Buffer = (VOID *)0x100000; 
+UINTN BufferSize = 100000 ;
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
@@ -133,9 +135,38 @@ EFI_STATUS set_kernel2(EFI_FILE_PROTOCOL *Kernel){
     Print(L"Success on set kernel, for the 2nd time\n");
     return EFI_SUCCESS;
 }
+EFI_STATUS read(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+        Status = uefi_call_wrapper(
+        Kernel->Read,
+        3,
+        Kernel,
+        &BufferSize,
+        Buffer
+    );
+    if(EFI_ERROR(Status)){
+        Print(L"Error on read kernel\n");
+        return Status;
+    }
+    Print(L"Success on read kernel\n");
+    return EFI_SUCCESS;
+}
+EFI_STATUS close(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+    Status = uefi_call_wrapper(
+        Kernel->Close,
+        1,
+        Kernel
+    );
+    if(EFI_ERROR(Status)){
+        Print(L"Error on close kernel\n");
+        return Status;
+    }
+    Print(L"Success on close kernel\n");
+    return EFI_SUCCESS;
+}
 EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
     EFI_STATUS Status;
-    EFI_BOOT_SERVICES services;
     UINTN Pages = (*GetKernel + 4095) / 4096; //number of Pages
     Status = uefi_call_wrapper(
         ptr->BootServices->AllocatePages,
@@ -143,19 +174,35 @@ EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
         AllocateAddress,
         EfiLoaderData,
         Pages,
-        Memory 
+        &Memory 
 
     );
     if(EFI_ERROR(Status)){
-        Print(L"Error in Alloc_Pages");
+        Print(L"Error in Alloc_Pages\n");
         return Status;
     }
 
-    Print(L"Success in Alloc_Pages\n ");
+    Print(L"Success in Alloc_Pages\n");
     return EFI_SUCCESS;
 }
+EFI_STATUS gop(void){
+    typedef enum{
+        PixelRedGreenBlueReserved8BitPcolo;
+        PixelBlueGreenRedReserved8BitPcolo;
+        PixelBitMas;
+        PixelBltOnl;
+        PixelFormatMa;
+    } EFI_GRAPHICS_PIXEL;
+    
+    typedef struct{
+        UINT32 Version;
+        UINT32 AxisX; //width
+        UINT32 AxisY; //height
+        UINT32 Pixel;
+        UINT32 ScanLine;
 
-
+    } Gop;
+}
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
@@ -171,9 +218,6 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     get_time(SystemTable);
     memory_map();
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
-
-
-
     Open_Volume(SystemTable,&Root);
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
     Load_Kernel(Root,&KernelFile);
@@ -182,13 +226,13 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     get_kernel(KernelFile);// get kernel size
     set_kernel2(KernelFile); //set kernel to 0
     Alloc_Pages(SystemTable);
+    read(KernelFile);
+    close(KernelFile);
     Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
-    asm("cli");
+    asm("cli"); //disable interrupts
     return EFI_SUCCESS; // Good Bye EFI :D
     
 
 }
 
-
- 
