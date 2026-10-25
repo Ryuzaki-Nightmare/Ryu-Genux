@@ -7,8 +7,11 @@
 EFI_STATUS Status ;
 EFI_FILE_PROTOCOL *KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
+EFI_PHYSICAL_ADDRESS Memory = (EFI_PHYSICAL_ADDRESS)0x100000; //Pointer to kernel physical address
+
 UINT64   *GetKernel = 0;
 UINT64 MHex =  0xFFFFFFFFFFFFFFFF; //Max Value
+
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
@@ -26,7 +29,7 @@ void get_time(EFI_SYSTEM_TABLE *ptr){
         time.Daylight = efi_time.Daylight;
         time.Pad2 = efi_time.Pad2;
 }
-BootInfo memory_map() {
+BootInfo memory_map(void) {
     UINTN MemoryMapSize = 0;
     EFI_MEMORY_DESCRIPTOR *MemoryMap = NULL;
     UINTN MapKey;
@@ -82,8 +85,7 @@ EFI_STATUS Load_Kernel(EFI_FILE_PROTOCOL *Root,EFI_FILE_PROTOCOL **KernelFile){
     }
     
     Print(L"Success in Load Kernel\n");
-    Print(L"%p\n",KernelFile);
-   return EFI_SUCCESS;
+    return EFI_SUCCESS;
 }
 EFI_STATUS set_kernel(EFI_FILE_PROTOCOL *Kernel){
     EFI_STATUS Status;
@@ -95,13 +97,64 @@ EFI_STATUS set_kernel(EFI_FILE_PROTOCOL *Kernel){
     );
     
     if(EFI_ERROR(Status)){
-        Print(L"Error in set kernel");
+        Print(L"Error in set kernel\n");
         return Status;
     }
 
-    Print(L"Success on set kernel");
+    Print(L"Success on set kernel\n");
     return EFI_SUCCESS;
 }
+EFI_STATUS get_kernel(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+    Status = uefi_call_wrapper(
+        Kernel->GetPosition,
+        2,
+        Kernel,
+        GetKernel
+    );
+    Print(L"Success on get kernel\n");
+    return EFI_SUCCESS;
+
+}
+EFI_STATUS set_kernel2(EFI_FILE_PROTOCOL *Kernel){
+    EFI_STATUS Status;
+    Status = uefi_call_wrapper(
+        Kernel->SetPosition,
+        2, 
+        Kernel,
+        0
+    );
+    
+    if(EFI_ERROR(Status)){
+        Print(L"Error in set kernel, for the 2nd time\n");
+        return Status;
+    }
+
+    Print(L"Success on set kernel, for the 2nd time\n");
+    return EFI_SUCCESS;
+}
+EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
+    EFI_STATUS Status;
+    EFI_BOOT_SERVICES services;
+    UINTN Pages = (*GetKernel + 4095) / 4096; //number of Pages
+    Status = uefi_call_wrapper(
+        ptr->BootServices->AllocatePages,
+        4,
+        AllocateAddress,
+        EfiLoaderData,
+        Pages,
+        Memory 
+
+    );
+    if(EFI_ERROR(Status)){
+        Print(L"Error in Alloc_Pages");
+        return Status;
+    }
+
+    Print(L"Success in Alloc_Pages\n ");
+    return EFI_SUCCESS;
+}
+
 
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -116,6 +169,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); 
     Print(L"Genux Bootloader....\n");
     get_time(SystemTable);
+    memory_map();
     uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
 
 
@@ -125,8 +179,12 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Load_Kernel(Root,&KernelFile);
   
     set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
+    get_kernel(KernelFile);// get kernel size
+    set_kernel2(KernelFile); //set kernel to 0
+    Alloc_Pages(SystemTable);
     Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
+    asm("cli");
     return EFI_SUCCESS; // Good Bye EFI :D
     
 
