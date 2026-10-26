@@ -4,7 +4,10 @@
 
 typedef unsigned long   UINTN;
 typedef unsigned int UINT32;
-
+typedef unsigned char  uint8_t;// 255
+typedef unsigned short uint16_t;// 65k
+typedef unsigned int   uint32_t;//4b
+typedef signed short int16_t;
 //Genux Time Struct
 typedef struct {
    uint16_t   Year;              // 1900 - 9999
@@ -20,7 +23,7 @@ typedef struct {
    uint8_t     Pad2;
 } GENUX_TIME;
 typedef struct {
-    EFI_MEMORY_DESCRIPTOR *MemoryMap;
+    void *MemoryMap;
     UINTN MemoryMapSize;
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
@@ -29,5 +32,48 @@ typedef struct {
 
 GENUX_TIME time;
 BootInfo info;
+
+//GOP STRUCTS
+
+typedef enum {
+        PixelRedGreenBlueReserved8BitPcolo,
+        PixelBlueGreenRedReserved8BitPcolo,
+        PixelBitMas,
+        PixelBltOnl,
+        PixelFormatMa,
+} EFI_GRAPHICS_PIXEL;
+
+typedef struct{
+        void* QueryMode;
+        void* SetMode;
+        void* Blt;
+        void* *Mode;
+} EFI_GOP; //based on EFI_GRAPHICS_OUTPUT_PROTOCOL, using generic pointers
+
+typedef struct{
+    void* RedMask;
+    void* GreenMask;
+    void* BlueMask;
+    void* ReservedMask;
+} EFI_PIXEL_Mask; //based on EFI_PIXEL_BITMASK
+
+typedef struct{
+    void* Version;
+    void* HorizontalResolution;
+    void* VerticalResolution;
+    void* PixelFormat;
+    void* PixelInformation;
+    void* PixelsPerScanLine;
+}EFI_GOP_INFORMATION; // based on EFI_GRAPHICS_OUTPUT_MODE_INFORMATION
+typedef struct{
+    void* MaxMode;
+    void* Mode;
+}EFI_GOP_MODE; //Based on efi_graphics_output_protocol_mode
+
+
+
+
+
+
 
 #endif

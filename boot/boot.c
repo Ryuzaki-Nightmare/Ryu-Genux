@@ -44,7 +44,7 @@ BootInfo memory_map(void) {
     uefi_call_wrapper(gBS->GetMemoryMap, 5, &MemoryMapSize, MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion);
 
     BootInfo info;
-    info.MemoryMap         = MemoryMap;
+    info.MemoryMap         = (EFI_MEMORY_DESCRIPTOR*) MemoryMap;
     info.MemoryMapSize     = MemoryMapSize;
     info.DescriptorSize    = DescriptorSize;
     info.DescriptorVersion = DescriptorVersion;
@@ -186,22 +186,7 @@ EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
     return EFI_SUCCESS;
 }
 EFI_STATUS gop(void){
-    typedef enum{
-        PixelRedGreenBlueReserved8BitPcolo;
-        PixelBlueGreenRedReserved8BitPcolo;
-        PixelBitMas;
-        PixelBltOnl;
-        PixelFormatMa;
-    } EFI_GRAPHICS_PIXEL;
-    
-    typedef struct{
-        UINT32 Version;
-        UINT32 AxisX; //width
-        UINT32 AxisY; //height
-        UINT32 Pixel;
-        UINT32 ScanLine;
 
-    } Gop;
 }
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -228,6 +213,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Alloc_Pages(SystemTable);
     read(KernelFile);
     close(KernelFile);
+    gop();
     Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
     asm("cli"); //disable interrupts
