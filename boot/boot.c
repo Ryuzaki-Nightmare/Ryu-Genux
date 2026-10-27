@@ -186,7 +186,35 @@ EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
     return EFI_SUCCESS;
 }
 EFI_STATUS gop(void){
+  
+    //GOP LOCAL VARIABLES
+    EFI_GUID GopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+    UINTN *SIZEOFINFO;
+    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION **Info;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *GOP   = NULL;
+    EFI_STATUS status = uefi_call_wrapper(
+    BS->LocateProtocol, 3,
+    &GopGuid,
+    NULL,
+    (VOID **)&GOP
+    ); //Create  the gop struct
 
+    if (EFI_ERROR(status) || GOP == NULL) {
+        //catch if can't create gop
+        Print(L"Error on Create Gop Struct\n");
+        return status;
+    }
+    Status = uefi_call_wrapper(
+        GOP->QueryMode,
+        4,
+        GOP,
+        1,
+        &SIZEOFINFO,
+        &Info
+    );
+
+    Print(L"Success in create Gop Structs\n");
+    return EFI_SUCCESS;
 }
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
