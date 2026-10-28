@@ -41,7 +41,7 @@ typedef enum {
         PixelBitMas,
         PixelBltOnl,
         PixelFormatMa,
-} EFI_GRAPHICS_PIXEL;
+} EFI_GRAPHICS_PIXEL; //based on EFI_GRAPHICS_PIXEL_FORMAT
 
 typedef struct{
         void* QueryMode;
@@ -51,24 +51,20 @@ typedef struct{
 } EFI_GOP; //based on EFI_GRAPHICS_OUTPUT_PROTOCOL, using generic pointers
 
 typedef struct{
-    void* RedMask;
-    void* GreenMask;
-    void* BlueMask;
-    void* ReservedMask;
-} EFI_PIXEL_Mask; //based on EFI_PIXEL_BITMASK
+    uint32_t RedMask;
+    uint32_t GreenMask;
+    uint32_t BlueMask;
+    uint32_t ReservedMask;
+} EFI_PIXEL_MASK; //based on EFI_PIXEL_BITMASK
 
 typedef struct{
-    void* Version;
-    void* HorizontalResolution;
-    void* VerticalResolution;
-    void* PixelFormat;
-    void* PixelInformation;
-    void* PixelsPerScanLine;
+    uint32_t Version;
+    uint32_t WidthResolution;
+    uint32_t HeightResolution;
+    EFI_GRAPHICS_PIXEL PixelFormat;
+    EFI_PIXEL_MASK PixelInformation;
+    uint32_t PixelsPerScanLine;
 }EFI_GOP_INFORMATION; // based on EFI_GRAPHICS_OUTPUT_MODE_INFORMATION
-typedef struct{
-    void* MaxMode;
-    void* Mode;
-}EFI_GOP_MODE; //Based on efi_graphics_output_protocol_mode
 
 
 
