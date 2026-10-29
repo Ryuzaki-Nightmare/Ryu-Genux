@@ -8,6 +8,7 @@ typedef unsigned char  uint8_t;// 255
 typedef unsigned short uint16_t;// 65k
 typedef unsigned int   uint32_t;//4b
 typedef signed short int16_t;
+typedef long long unsigned int Uint64_t;
 //Genux Time Struct
 typedef struct {
    uint16_t   Year;              // 1900 - 9999
@@ -43,12 +44,6 @@ typedef enum {
         PixelFormatMa,
 } EFI_GRAPHICS_PIXEL; //based on EFI_GRAPHICS_PIXEL_FORMAT
 
-typedef struct{
-        void* QueryMode;
-        void* SetMode;
-        void* Blt;
-        void* *Mode;
-} EFI_GOP; //based on EFI_GRAPHICS_OUTPUT_PROTOCOL, using generic pointers
 
 typedef struct{
     uint32_t RedMask;
@@ -63,8 +58,11 @@ typedef struct{
     uint32_t HeightResolution;
     EFI_GRAPHICS_PIXEL PixelFormat;
     EFI_PIXEL_MASK PixelInformation;
+    Uint64_t FrameBufferBase;
+    UINTN   FrameBufferSize;
     uint32_t PixelsPerScanLine;
 }EFI_GOP_INFORMATION; // based on EFI_GRAPHICS_OUTPUT_MODE_INFORMATION
+
 
 
 

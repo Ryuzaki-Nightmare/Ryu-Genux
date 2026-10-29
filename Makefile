@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -m64 -ffreestanding -nostdlib -no-pie
+CCFLAGS = -m64 -ffreestanding -nostdlib -no-pie 
 BUILD = build
 SRC = boot/boot.c
 KERNEL = boot/kernel.c
@@ -48,7 +48,7 @@ Compile:
 KERNEL_COMPILE:Compile
 		$(CC) $(KERNEL) $(CCFLAGS) -o $(BUILD)/esp/kernel.bin 
 run: KERNEL_COMPILE
-	#in "-m 16G" put how many memory ram you want use in qemu, in -smp is how many cores you want use in Qemu
+	#in "-m 16G" put how many memory ram you want use in qemu,
 	qemu-system-x86_64                        \
     -enable-kvm                           \
     -m 16G                                \
