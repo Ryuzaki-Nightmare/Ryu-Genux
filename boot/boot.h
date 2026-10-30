@@ -31,8 +31,6 @@ typedef struct {
     UINTN MapKey;
 } BootInfo; //memory map for Genux
 
-GENUX_TIME time;
-BootInfo info;
 
 //GOP STRUCTS
 

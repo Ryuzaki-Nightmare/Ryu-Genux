@@ -5,6 +5,9 @@
 
 /*IMPORTANTS VARIABLES, SET HERE*/
 
+BootInfo Info;
+GENUX_TIME time;
+EFI_GOP_INFORMATION info;
 EFI_FILE_PROTOCOL *KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
 EFI_PHYSICAL_ADDRESS Memory = 0x100000; //Pointer to kernel physical address
@@ -16,6 +19,7 @@ VOID *Buffer = (VOID *)0x100000;
 UINTN BufferSize = 100000 ;
 void get_time(EFI_SYSTEM_TABLE *ptr){
     EFI_TIME efi_time;
+    
     uefi_call_wrapper(ptr->RuntimeServices->GetTime,2,&efi_time,NULL);
 
         //This is time to use in Kernel
@@ -43,15 +47,13 @@ BootInfo memory_map(void) {
     uefi_call_wrapper(gBS->AllocatePool, 3, EfiLoaderData, MemoryMapSize, (VOID**)&MemoryMap);
     uefi_call_wrapper(gBS->GetMemoryMap, 5, &MemoryMapSize, MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion);
 
-    BootInfo info;
-    info.MemoryMap         = (EFI_MEMORY_DESCRIPTOR*) MemoryMap;
-    info.MemoryMapSize     = MemoryMapSize;
-    info.DescriptorSize    = DescriptorSize;
-    info.DescriptorVersion = DescriptorVersion;
-    info.MapKey            = MapKey;
-    MAP_KEY = MapKey;
+    Info.MemoryMap         = (EFI_MEMORY_DESCRIPTOR*) MemoryMap;
+    Info.MemoryMapSize     = MemoryMapSize;
+    Info.DescriptorSize    = DescriptorSize;
+    Info.DescriptorVersion = DescriptorVersion;
+    Info.MapKey            = MapKey;
     Print(L"Success to Get Memory Map\n");
-    return info;
+    return Info;
 }
 EFI_STATUS Open_Volume(EFI_SYSTEM_TABLE *Sptr,EFI_FILE_PROTOCOL **Root){
     EFI_STATUS Status;
@@ -193,7 +195,6 @@ EFI_STATUS gop(void){
     UINTN SIZEOFINFO, numMode;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *Info;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *GOP   = NULL;
-    EFI_GOP_INFORMATION info;
     int i;
     UINTN a = 0;
     
@@ -276,7 +277,6 @@ void map_key(void){
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
     // Efi main function
-    typedef void (__attribute__((sysv_abi)) *kernel_entry_t)(void);
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //CLEAR THE SCREEN
@@ -317,9 +317,11 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
         Print(L"Error on ExitBootServices");
         while(1);
     }
+    typedef void (__attribute__((sysv_abi)) *kernel_entry_t)(EFI_GOP_INFORMATION *,GENUX_TIME,BootInfo);
     kernel_entry_t kernel_main = (kernel_entry_t) 0x100000;
     asm("cli"); //disable interrupts
-       kernel_main();//call kernel main in kernel.c
+    kernel_main(&info,time,Info);//call kernel main in kernel.c
+
     while(1);     
     return EFI_SUCCESS; // Good Bye EFI :D
     

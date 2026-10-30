@@ -1,8 +1,8 @@
 CC = gcc
-CCFLAGS = -m64 -ffreestanding -nostdlib -no-pie 
+CCFLAGS = -m64 -ffreestanding -nostdlib -no-pie -T linker.ld -Wl,--oformat=binary
 BUILD = build
 SRC = boot/boot.c
-KERNEL = boot/kernel.c
+KERNEL = kernel/kernel.c
 OUT = $(BUILD)/BOOTX64.EFI
 LD = linker
 all : clean
