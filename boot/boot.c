@@ -189,11 +189,12 @@ EFI_STATUS gop(void){
     EFI_STATUS Status,status;
     //GOP LOCAL VARIABLES
     EFI_GUID GopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
-    UINTN *SIZEOFINFO, numMode;
+    UINTN SIZEOFINFO, numMode;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *Info;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *GOP   = NULL;
     EFI_GOP_INFORMATION info;
     int i;
+    UINTN a = 0;
     
     Status = uefi_call_wrapper(
     BS->LocateProtocol, 3,
@@ -212,7 +213,7 @@ EFI_STATUS gop(void){
         &Info
     );
     if(EFI_ERROR(STATUS)){
-        Print(L"Error on get mode");
+        Print(L"Error on get mode\n");
         return STATUS;
     }else{
         numMode = GOP->Mode->MaxMode;
@@ -239,12 +240,18 @@ EFI_STATUS gop(void){
         info.PixelsPerScanLine = Info->PixelsPerScanLine;
     
     info.FrameBufferBase = GOP->Mode->FrameBufferBase;
-    Print(L" width %d height %d pixelsperline %d\n",
+    Print(L" width %d height %d pixelsperline %d, pixelperscanline %d\n",
     info.WidthResolution,
     info.HeightResolution,
-    info.PixelsPerScanLine
+    info.PixelsPerScanLine,
+    info.PixelsPerScanLine 
     );
-
+    EFI_STATUS Status2 = uefi_call_wrapper(
+        GOP->SetMode,
+        2,
+        GOP,
+        a
+    );
     if (EFI_ERROR(Status) || GOP == NULL) {
         //catch if can't create gop
         Print(L"Error on Create Gop Struct\n");
@@ -254,7 +261,10 @@ EFI_STATUS gop(void){
         Print(L"Error on use gop.QueryMode();\n");
         return status;
     }
-
+    if(EFI_ERROR(Status2)){
+        Print(L"Error on SetMode");
+        return Status2;
+    }
 
     Print(L"Success on set GOP!\n");
     return EFI_SUCCESS;
@@ -265,6 +275,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     // Efi main function
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
+    gop();
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //CLEAR THE SCREEN
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
     Print(L"Welcome to Genux Bootloader!\n");
@@ -284,7 +295,6 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Alloc_Pages(SystemTable);
     read(KernelFile);
     close(KernelFile);
-    gop();
     Print(L"All Of Success");
     while(1); //Remove this line to finish EFI!
     asm("cli"); //disable interrupts
