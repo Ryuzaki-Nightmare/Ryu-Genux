@@ -186,14 +186,16 @@ EFI_STATUS Alloc_Pages(EFI_SYSTEM_TABLE *ptr){
     return EFI_SUCCESS;
 }
 EFI_STATUS gop(void){
-    EFI_STATUS Status;
+    EFI_STATUS Status,status;
     //GOP LOCAL VARIABLES
     EFI_GUID GopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     UINTN *SIZEOFINFO, numMode;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *Info;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *GOP   = NULL;
     EFI_GOP_INFORMATION info;
-     Status = uefi_call_wrapper(
+    int i;
+    
+    Status = uefi_call_wrapper(
     BS->LocateProtocol, 3,
     &GopGuid,
     NULL,
@@ -201,17 +203,22 @@ EFI_STATUS gop(void){
     ); //Create  the gop struct
 
     
-    if (Status == EFI_NOT_STARTED){
-        Status = uefi_call_wrapper(
-            GOP->SetMode, 
-            2,
-            gop,
-            0
-        );
-
+    EFI_STATUS STATUS = uefi_call_wrapper(
+        GOP->QueryMode,
+        4,
+        GOP,
+        NULL,
+        &SIZEOFINFO,
+        &Info
+    );
+    if(EFI_ERROR(STATUS)){
+        Print(L"Error on get mode");
+        return STATUS;
+    }else{
+        numMode = GOP->Mode->MaxMode;
     }
-    for(int i = 0; i < numMode; i++){
-        Status = uefi_call_wrapper(
+    for(i = 0; i < numMode; i++){
+         status = uefi_call_wrapper(
         //Call to QueryMode
         GOP->QueryMode,
         4,
@@ -221,10 +228,9 @@ EFI_STATUS gop(void){
         &Info
         );
 
-            info.Version = Info->Version;
-            info.WidthResolution = Info->HorizontalResolution;
-            info.HeightResolution =Info->VerticalResolution;
-            info.PixelFormat =  Info->PixelFormat;
+        info.WidthResolution = Info->HorizontalResolution;
+        info.HeightResolution =Info->VerticalResolution;
+        info.PixelFormat =  Info->PixelFormat;
     }        
         info.PixelInformation.RedMask = Info->PixelInformation.RedMask;
         info.PixelInformation.GreenMask = Info->PixelInformation.GreenMask;
@@ -233,7 +239,7 @@ EFI_STATUS gop(void){
         info.PixelsPerScanLine = Info->PixelsPerScanLine;
     
     info.FrameBufferBase = GOP->Mode->FrameBufferBase;
-    Print(L"Framebuffer address  width %d height %d pixelsperline %d\n",
+    Print(L" width %d height %d pixelsperline %d\n",
     info.WidthResolution,
     info.HeightResolution,
     info.PixelsPerScanLine
@@ -244,9 +250,9 @@ EFI_STATUS gop(void){
         Print(L"Error on Create Gop Struct\n");
         return Status;
     }
-    if (EFI_ERROR(Status) ){
-        Print(L"Error on use QueryMode gop function\n ");
-        return Status;
+    if(EFI_ERROR(status)){
+        Print(L"Error on use gop.QueryMode();\n");
+        return status;
     }
 
 
