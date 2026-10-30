@@ -4,11 +4,11 @@
 #include "boot.h" //this is a local Include
 
 /*IMPORTANTS VARIABLES, SET HERE*/
-EFI_STATUS Status ;
+
 EFI_FILE_PROTOCOL *KernelFile = NULL;
 EFI_FILE_PROTOCOL *Root = NULL;
 EFI_PHYSICAL_ADDRESS Memory = 0x100000; //Pointer to kernel physical address
-
+UINTN MAP_KEY; //variable to use in exit boot services
 UINT64   *GetKernel = 0;
 UINT64 MHex =  0xFFFFFFFFFFFFFFFF; //Max Value
 //Variables Read kernel
@@ -49,6 +49,7 @@ BootInfo memory_map(void) {
     info.DescriptorSize    = DescriptorSize;
     info.DescriptorVersion = DescriptorVersion;
     info.MapKey            = MapKey;
+    MAP_KEY = MapKey;
     Print(L"Success to Get Memory Map\n");
     return info;
 }
@@ -219,7 +220,7 @@ EFI_STATUS gop(void){
         numMode = GOP->Mode->MaxMode;
     }
     for(i = 0; i < numMode; i++){
-         status = uefi_call_wrapper(
+        status = uefi_call_wrapper(
         //Call to QueryMode
         GOP->QueryMode,
         4,
@@ -240,12 +241,6 @@ EFI_STATUS gop(void){
         info.PixelsPerScanLine = Info->PixelsPerScanLine;
     
     info.FrameBufferBase = GOP->Mode->FrameBufferBase;
-    Print(L" width %d height %d pixelsperline %d, pixelperscanline %d\n",
-    info.WidthResolution,
-    info.HeightResolution,
-    info.PixelsPerScanLine,
-    info.PixelsPerScanLine 
-    );
     EFI_STATUS Status2 = uefi_call_wrapper(
         GOP->SetMode,
         2,
@@ -266,27 +261,38 @@ EFI_STATUS gop(void){
         return Status2;
     }
 
-    Print(L"Success on set GOP!\n");
     return EFI_SUCCESS;
 }
+void map_key(void){
+    //recriate memory_map, just past MapKey to MAP_KEY 
+    UINTN MapKey;
+    UINTN MemoryMapSize = 0;
+    UINTN DescriptorSize;
+    UINT32 DescriptorVersion;
 
+    uefi_call_wrapper(gBS->GetMemoryMap, 5, &MemoryMapSize, NULL, &MapKey, &DescriptorSize, &DescriptorVersion);
+    MAP_KEY = MapKey;
+}
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
     // Efi main function
+    typedef void (__attribute__((sysv_abi)) *kernel_entry_t)(void);
     InitializeLib(ImageHandle, SystemTable);
     // USE uefi_call_wrapper(Target_Function, Argument_Count, Argument_1, Argument_2, ...); to uefi call
-    gop();
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //CLEAR THE SCREEN
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem = NULL;
     Print(L"Welcome to Genux Bootloader!\n");
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 2000000);
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 3000000);
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); 
+    gop();
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); 
+
     Print(L"Genux Bootloader....\n");
+    Print(L"Success on set GOP!\n");
     get_time(SystemTable);
     memory_map();
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
     Open_Volume(SystemTable,&Root);
-    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 1000000);
+
     Load_Kernel(Root,&KernelFile);
   
     set_kernel(KernelFile); // Set kernel to 0xFFFFFFFFFFFFFFFFFFFFF
@@ -295,9 +301,26 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Alloc_Pages(SystemTable);
     read(KernelFile);
     close(KernelFile);
-    Print(L"All Of Success");
-    while(1); //Remove this line to finish EFI!
+    
+    Print(L"Bye Bye Efi\n");
+    uefi_call_wrapper(SystemTable->BootServices->Stall, 1, 3000000);
+
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut); //clear the screen to kernel
+    map_key();
+    EFI_STATUS Status = uefi_call_wrapper(
+        BS->ExitBootServices,
+        2,
+        ImageHandle,
+        MAP_KEY
+    );
+    if(EFI_ERROR(Status)){
+        Print(L"Error on ExitBootServices");
+        while(1);
+    }
+    kernel_entry_t kernel_main = (kernel_entry_t) 0x100000;
     asm("cli"); //disable interrupts
+       kernel_main();//call kernel main in kernel.c
+    while(1);     
     return EFI_SUCCESS; // Good Bye EFI :D
     
 
